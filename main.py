@@ -10,6 +10,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://galactic-archives.github.io",
+                "https://galacticarchives.space",
         "http://localhost:*",
         "http://127.0.0.1:*"
     ],
