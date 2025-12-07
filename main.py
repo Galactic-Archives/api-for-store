@@ -49,7 +49,7 @@ async def get_products():
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{PRINTFUL_BASE_URL}/products",
+                f"{PRINTFUL_BASE_URL}/store/products",
                 headers=headers,
                 timeout=30.0
             )
