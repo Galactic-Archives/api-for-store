@@ -54,8 +54,21 @@ async def get_products():
                 timeout=30.0
             )
             response.raise_for_status()
-            return response.json()
-    except httpx.HTTPStatusError as e:
+            # Get sync products data
+            data = response.json()
+            
+            # Transform sync product format to catalog format
+            transformed_products = []
+            for product in data.get("result", []):
+                transformed_products.append({
+                    "id": product.get("id"),
+                    "name": product.get("name", "Product"),
+                    "type_name": product.get("name", "Product"),
+                    "thumbnail_url": product.get("thumbnail_url", ""),
+                    "image": product.get("thumbnail_url", "")
+                })
+            
+            return {"code": 200, "result": transformed_products}    except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"Printful API error: {e.response.text}"
