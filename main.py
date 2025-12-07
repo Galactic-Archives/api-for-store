@@ -68,7 +68,8 @@ async def get_products():
                     "image": product.get("thumbnail_url", "")
                 })
             
-            return {"code": 200, "result": transformed_products}    except httpx.HTTPStatusError as e:
+                    return {"code": 200, "result": transformed_products}
+    except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"Printful API error: {e.response.text}"
