@@ -69,12 +69,12 @@ async def get_products():
                 })
             
                 return {"code": 200, "result": transformed_products}
-            except httpx.HTTPStatusError as e:
+    except httpx.HTTPStatusError as e:
                 raise HTTPException(
                     status_code=e.response.status_code,
                     detail=f"Printful API error: {e.response.text}"
                 )
-            except Exception as e:
+    except Exception as e:
                 raise HTTPException(
                     status_code=500,
                     detail=f"Error fetching products: {str(e)}"
@@ -103,7 +103,7 @@ async def get_product(product_id: int):
             )
             response.raise_for_status()
             return response.json()
-    except httpx.HTTPStatusError as e:
+    except ttpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"Printful API error: {e.response.text}"
