@@ -10,7 +10,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS – allow your static site domain
+# CORS - Allow your static site domain
 origins = [
     "https://galacticarchives.space",
     "http://localhost:3000",
@@ -25,14 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get Printful API key from environment variable
+# Get PRINTFUL API key from environment variable
 PRINTFUL_API_KEY = os.getenv("PRINTFUL_API_KEY")
 if not PRINTFUL_API_KEY:
     raise ValueError("PRINTFUL_API_KEY environment variable is not set")
 
 PRINTFUL_API_BASE = "https://api.printful.com"
 
-
+# Product model
 class Product(BaseModel):
     id: str
     name: str
@@ -42,13 +42,11 @@ class Product(BaseModel):
     currency: str = "GBP"
     category: Optional[str] = None
     is_active: bool = True
-    external_id: Optional[str] = None  # Printful product id
-
+    external_id: Optional[str] = None  # Printful product ID
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok"}
-
+    return {"status": "OK"}
 
 async def fetch_printful_products():
     """
@@ -71,6 +69,7 @@ async def fetch_printful_products():
             response.raise_for_status()
             data = response.json()
             
+            # Check for error in response
             if data.get("code") != 200:
                 raise HTTPException(
                     status_code=500,
@@ -84,12 +83,11 @@ async def fetch_printful_products():
                 detail=f"Failed to fetch products from Printful: {str(e)}"
             )
 
-
 def map_printful_product_to_product(printful_product: dict) -> Product:
     """
     Map a Printful sync product to our Product model.
     """
-    sync_product = printful_product.get("sync_product", {})
+    # Printful API returns products in flat structure with direct access to id, name, etc.
     sync_variants = printful_product.get("sync_variants", [])
     
     # Get the first variant for pricing (you can customize this logic)
@@ -98,20 +96,19 @@ def map_printful_product_to_product(printful_product: dict) -> Product:
     currency = first_variant.get("currency", "GBP")
     
     # Get thumbnail image
-    thumbnail_url = sync_product.get("thumbnail_url")
+    thumbnail_url = printful_product.get("thumbnail_url")
     
     return Product(
-        id=str(sync_product.get("id")),
-        name=sync_product.get("name", "Unknown Product"),
-        description=sync_product.get("name", ""),
+        id=str(printful_product.get("id")),
+        name=printful_product.get("name", "Unknown Product"),
+        description=printful_product.get("name", ""),
         image_url=thumbnail_url,
         price=float(retail_price),
         currency=currency,
         category="Products",
         is_active=True,
-        external_id=str(sync_product.get("id"))
+        external_id=str(printful_product.get("id"))
     )
-
 
 @app.get("/api/products", response_model=List[Product])
 async def list_products(only_active: bool = True):
@@ -127,6 +124,7 @@ async def list_products(only_active: bool = True):
             for p in printful_products
         ]
         
+        # Filter only active products if requested
         if only_active:
             products = [p for p in products if p.is_active]
         
@@ -136,5 +134,9 @@ async def list_products(only_active: bool = True):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch products: {str(e)}"
+            detail=f"Failed to process products: {str(e)}"
         )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
