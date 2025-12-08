@@ -1,115 +1,91 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import httpx
-import os
+from pydantic import BaseModel, HttpUrl
+from typing import List, Optional
 
-app = FastAPI(title="Galactic Archives Store API")
+app = FastAPI(
+    title="Galactic Archives Store API",
+    version="1.0.0",
+)
 
-# Configure CORS to allow requests from your GitHub Pages site
+# CORS – allow your static site domain
+origins = [
+    "https://galacticarchives.space",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://galactic-archives.github.io",
-                "https://galacticarchives.space",
-        "http://localhost:*",
-        "http://127.0.0.1:*"
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Get Printful API key from environment variable
-PRINTFUL_API_KEY = os.getenv("PRINTFUL_API_KEY")
-PRINTFUL_BASE_URL = "https://api.printful.com"
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "service": "Galactic Archives Store API",
-        "message": "API proxy for Printful integration"
-    }
+class Product(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    image_url: Optional[HttpUrl] = None
+    price: float
+    currency: str = "GBP"
+    category: Optional[str] = None
+    is_active: bool = True
+    external_id: Optional[str] = None  # e.g. Printful product id
 
-@app.get("/api/products")
-async def get_products():
-    """Fetch all products from Printful"""
-    if not PRINTFUL_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="Printful API key not configured"
-        )
-    
-    headers = {
-        "Authorization": f"Bearer {PRINTFUL_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
+
+# For now: static demo data so the frontend always gets multiple products.
+# Later, you can replace this with a call to Printful or a database.
+DEMO_PRODUCTS: List[Product] = [
+    Product(
+        id="prod_001",
+        name="Holographic Stickers",
+        description="A set of shimmering space-themed holographic stickers.",
+        image_url="https://files.cdn.printful.com/path/to/holographic_stickers.png",
+        price=4.99,
+        category="Stickers",
+        external_id="printful_123",
+    ),
+    Product(
+        id="prod_002",
+        name="Galactic Archives T-Shirt",
+        description="Soft cotton t-shirt with the Galactic Archives emblem.",
+        image_url="https://files.cdn.printful.com/path/to/galactic_archives_tshirt.png",
+        price=18.50,
+        category="Apparel",
+        external_id="printful_456",
+    ),
+    Product(
+        id="prod_003",
+        name="Mission Patch",
+        description="Embroidered mission patch for your flight suit or backpack.",
+        image_url="https://files.cdn.printful.com/path/to/mission_patch.png",
+        price=6.75,
+        category="Accessories",
+        external_id="printful_789",
+    ),
+]
+
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/api/products", response_model=List[Product])
+def list_products(only_active: bool = True):
+    """
+    Return a flat array of products that the frontend can iterate over.
+    """
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{PRINTFUL_BASE_URL}/store/products",
-                headers=headers,
-                timeout=30.0
-            )
-            response.raise_for_status()
-            # Get sync products data
-            data = response.json()
-            
-            # Transform sync product format to catalog format
-            transformed_products = []
-            for product in data.get("result", []):
-                transformed_products.append({
-                    "id": product.get("id"),
-                    "name": product.get("name", "Product"),
-                    "type_name": product.get("name", "Product"),
-                    "thumbnail_url": product.get("thumbnail_url", ""),
-                    "image": product.get("thumbnail_url", "")
-                })
-            
-                return {"code": 200, "result": transformed_products}
-    except httpx.HTTPStatusError as e:
-                raise HTTPException(
-                    status_code=e.response.status_code,
-                    detail=f"Printful API error: {e.response.text}"
-                )
-    except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Error fetching products: {str(e)}"
-                )
+        products = DEMO_PRODUCTS
 
-@app.get("/api/products/{product_id}")
-async def get_product(product_id: int):
-    """Fetch a specific product from Printful"""
-    if not PRINTFUL_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="Printful API key not configured"
-        )
-    
-    headers = {
-        "Authorization": f"Bearer {PRINTFUL_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{PRINTFUL_BASE_URL}/products/{product_id}",
-                headers=headers,
-                timeout=30.0
-            )
-            response.raise_for_status()
-            return response.json()
-    except ttpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code,
-            detail=f"Printful API error: {e.response.text}"
-        )
+        if only_active:
+            products = [p for p in products if p.is_active]
+
+        return products
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error fetching product: {str(e)}"
-        )
+        # Log e in real code
+        raise HTTPException(status_code=500, detail="Failed to fetch products")
