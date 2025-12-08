@@ -68,17 +68,17 @@ async def get_products():
                     "image": product.get("thumbnail_url", "")
                 })
             
-                    return {"code": 200, "result": transformed_products}
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code,
-            detail=f"Printful API error: {e.response.text}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error fetching products: {str(e)}"
-        )
+                return {"code": 200, "result": transformed_products}
+            except httpx.HTTPStatusError as e:
+                raise HTTPException(
+                    status_code=e.response.status_code,
+                    detail=f"Printful API error: {e.response.text}"
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error fetching products: {str(e)}"
+                )
 
 @app.get("/api/products/{product_id}")
 async def get_product(product_id: int):
